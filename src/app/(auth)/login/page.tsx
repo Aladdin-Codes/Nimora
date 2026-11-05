@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { AuthShell } from "@/components/layout/auth-shell";
 import { SignInForm } from "@/features/authentication/auth-forms";
+import { isDevAuthEnabled } from "@/lib/auth/dev-session";
 
 export default function LoginPage() {
   return (
@@ -10,7 +11,7 @@ export default function LoginPage() {
       description="Pick up where your family left off. Your account keeps your information private and in one place."
     >
       <Suspense fallback={<div className="min-h-56" aria-hidden="true" />}>
-        <SignInForm />
+        <SignInForm devAuthEnabled={isDevAuthEnabled()} />
       </Suspense>
     </AuthShell>
   );

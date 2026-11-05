@@ -12,6 +12,15 @@
   --color-nimora-sage: var(--nimora-sage);
   --color-nimora-slate: var(--nimora-slate);
   --color-nimora-clay: var(--nimora-clay);
+  --color-nimora-teal-ink: var(--nimora-teal-ink);
+  --color-nimora-clay-ink: var(--nimora-clay-ink);
+  --color-nimora-danger: var(--nimora-danger);
+  --color-nimora-danger-bg: var(--nimora-danger-bg);
+  --color-nimora-success-ink: var(--nimora-success-ink);
+  --color-nimora-success-bg: var(--nimora-success-bg);
+  --color-nimora-warning-ink: var(--nimora-warning-ink);
+  --color-nimora-warning-bg: var(--nimora-warning-bg);
+  --color-nimora-neutral-bg: var(--nimora-neutral-bg);
 
   --font-sans: var(--font-inter);
   --font-heading: var(--font-manrope);
@@ -91,7 +100,7 @@ h6 {
   --muted-foreground: var(--nimora-slate);
   --accent: var(--nimora-teal);
   --accent-foreground: var(--nimora-navy);
-  --destructive: #b42318;
+  --destructive: var(--nimora-danger);
   --border: color-mix(in srgb, var(--nimora-slate) 22%, white);
   --input: color-mix(in srgb, var(--nimora-slate) 30%, white);
   --ring: var(--nimora-teal);
@@ -154,5 +163,16 @@ h6 {
   }
   html {
     @apply font-sans;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

@@ -1,69 +1,112 @@
-# Development test accounts
+# Supabase setup and development fixtures
 
-These accounts and records are fictional, private development fixtures. They are not public accounts and must never be created in production.
+This guide configures NIMORA against a hosted Supabase project. Docker and the local Supabase stack are not required. Use only a project you have independently confirmed is non-production when creating test users or loading synthetic fixtures.
+
+## 1. Create or select a development project
+
+1. Sign in to the Supabase dashboard.
+2. Create a dedicated project for development/QA, or select an existing project that you have confirmed is not production.
+3. Keep the database password and any secret/service-role keys private. Do not paste them into source files, browser code, chat, or issue trackers.
+
+## 2. Configure Supabase Auth
+
+In the project dashboard, open **Authentication → URL Configuration**:
+
+1. Set the site URL to `http://localhost:3000` for local app development.
+2. Add `http://localhost:3000/**` and `http://127.0.0.1:3000/**` to the redirect URL allowlist if the dashboard offers wildcard URLs. Otherwise add the exact callback URL used by the app: `http://localhost:3000/callback`.
+3. For a development project, email confirmation may be disabled for convenient local sign-up. If confirmation is enabled, users created manually in the dashboard must be confirmed before password sign-in succeeds.
+4. Do not disable RLS or add permissive policies to make the app work.
+
+The existing profile trigger in the first migration creates a `public.profiles` row for users created through Supabase Auth.
+
+## 3. Apply the database migrations
+
+The repository migrations define the schema, grants, triggers, and RLS policies. Apply them in timestamp order using the Supabase dashboard's **SQL Editor**:
+
+1. Open [20261105090000_guardian_children_and_rls.sql](../supabase/migrations/20261105090000_guardian_children_and_rls.sql).
+2. Copy its full contents into a new SQL Editor query and run it.
+3. After it succeeds, open [20261105100000_households_and_health_records.sql](../supabase/migrations/20261105100000_households_and_health_records.sql).
+4. Copy its full contents into another SQL Editor query and run it.
+
+Run each migration once per database. If a query reports an error, stop and resolve it before applying the next file; do not rerun only selected statements or edit policies ad hoc. These migration files are the authoritative schema for this repository.
+
+## 4. Configure the app
+
+Copy `.env.example` to `.env.local` in the project root and fill in the hosted project's **Project URL** and **publishable key** from **Project Settings → API Keys** (the exact menu label may vary):
+
+```dotenv
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<publishable-key>
+```
+
+Only the URL and publishable/anon key belong in `NEXT_PUBLIC_*` variables. Standard login does not need a service-role key. Keep `SUPABASE_SERVICE_ROLE_KEY` blank unless running the separately documented seed CLI; if used, it must remain server-side and must never be exposed to browser code.
+
+Restart the app after editing environment values:
+
+```powershell
+npm run dev
+```
+
+Open `http://localhost:3000/login`.
+
+## 5. Create and test a login
+
+For a single manual test user:
+
+1. In the dashboard open **Authentication → Users → Add user → Create new user**.
+2. Enter an email and a private password, and select **Auto Confirm User** (or confirm the user after creation).
+3. Save the user.
+4. Sign in at `/login` using the same project's URL/key in `.env.local`.
+5. Verify the user appears in **Authentication → Users** and that a matching profile row was created in `public.profiles`.
+
+Do not treat example addresses as pre-created accounts. Account creation is a dashboard action unless you deliberately run the development seeder below.
+
+## 6. Optional synthetic household and health fixtures
+
+The SQL fixture script uses these confirmed Auth users:
 
 | Email | Intended role | Household |
 | --- | --- | --- |
 | `owner@example.com` | Owner | Synthetic development household A |
-| `parent@example.com` | Parent | Synthetic development household A |
+| `parent@example.com` | Parent/guardian | Synthetic development household A |
 | `caregiver@example.com` | Read-only caregiver | Synthetic development household A |
 | `family2@example.com` | Separate household owner | Synthetic development household B |
 
-All four accounts use the password supplied in `SEED_TEST_PASSWORD`; there is no shared/default password in the repository. Choose a private password of at least 12 characters. The seeder resets these four users to that password on each run and marks their email addresses confirmed.
+Create and confirm all four users in **Authentication → Users** before continuing. Choose private passwords; this SQL script neither reads nor sets passwords.
 
-## Local Supabase setup
+Then, only in your verified non-production project:
 
-1. Install Docker Desktop and the Supabase CLI, then start the local Supabase stack from the repository root:
+1. Open [seed.sql](../supabase/seed.sql), copy its full contents into a new dashboard SQL Editor query, and run it.
+2. Open [verify_setup.sql](../supabase/verify_setup.sql), copy its full contents into another SQL Editor query, and run it.
+3. Review the query results for all four confirmed users, their profiles and household memberships, enabled RLS, and synthetic rows.
 
-   ```powershell
-   npx supabase start
-   ```
+The fixture script is repeatable and uses stable IDs/upserts. It inserts only into the app's public tables; it never creates Auth users, changes RLS, or fabricates clinical guidance. All health fixtures are explicitly synthetic and are not real records or Nigerian medical recommendations. Document fixtures are metadata placeholders, not uploaded files.
 
-2. Copy `.env.example` to `.env.local` and set the local API values printed by `supabase start`:
+### Optional API-based seeder
 
-   ```dotenv
-   NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
-   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<local-publishable-key>
-   SUPABASE_SERVICE_ROLE_KEY=<local-service-role-or-secret-key>
-   SEED_ENVIRONMENT=development
-   SEED_TEST_PASSWORD=<your-private-local-test-password>
-   ```
-
-   `.env.local` is git-ignored. Keep `SUPABASE_SERVICE_ROLE_KEY` server-side; never add a `NEXT_PUBLIC_` prefix or use it in browser code.
-
-3. Apply migrations to the local database and create/refresh the accounts and data:
-
-   ```powershell
-   npx supabase db reset
-   npm run db:seed:test
-   ```
-
-   If the local database is already migrated, `npx supabase migration up` can be used instead of `db reset` to preserve its contents. `db reset` recreates the local database and applies all migrations.
-
-4. Sign in through the app at `http://localhost:3000` using one of the emails above and the locally configured `SEED_TEST_PASSWORD`.
-
-The seed is repeatable: auth users are listed before any create call, existing users are refreshed by their existing auth ID, and all relational fixtures use stable UUIDs and upserts. Future appointment timestamps are recalculated on each run. Each fixture row has `is_synthetic = true`; document rows are metadata placeholders and no files are uploaded.
-
-## Remote development projects
-
-Local Supabase URLs are the default and safest target. Seeding any remote project requires all of the following:
+The repository also has `npm run db:seed:test`. Unlike `seed.sql`, this script uses the Supabase Admin API and resets the four test users' passwords from `SEED_TEST_PASSWORD`. It requires `SUPABASE_SERVICE_ROLE_KEY`, a private password, and explicit remote-development allowlisting:
 
 - `SEED_ENVIRONMENT=development`
 - `SEED_ALLOW_REMOTE_DEV=true`
-- `SEED_ALLOWED_PROJECT_REF` set to the exact, independently verified non-production project reference
-- `NODE_ENV` must not be `production`
+- `SEED_ALLOWED_PROJECT_REF` equal to the exact non-production project reference
 
-The URL must be HTTPS and its Supabase project reference must exactly match the allowlist. Do not configure production project values in this workflow. The seeder refuses other targets by default.
+The script refuses production and unapproved remote projects. Do not run it unless you are certain the configured project is non-production. Never add the service-role key to a `NEXT_PUBLIC_*` variable.
 
-## Authorization expectations
+## 7. Check authorization and isolation
 
-- Owners can read their household and child data and can manage child health records.
-- Parents can read the household and child data, and can add/update household health records.
-- Caregivers can read records for their own household but cannot modify them or see another household.
-- Household memberships are read-only to authenticated clients. No client can insert a membership or update its role to elevate itself.
-- Anonymous clients cannot read child or health data.
-- Notifications are visible only to their addressed user, subject to access to the related child.
+The second migration installs policies for household and child isolation. Use the app while signed in as the owner, parent, caregiver, and separate-household owner to verify expected access. The API seeder's `npm run db:seed:test` performs automated RLS checks when configured for a permitted target. Running [verify_setup.sql](../supabase/verify_setup.sql) inspects policy presence and RLS flags, but does not itself simulate end-user access; SQL Editor runs with elevated database privileges.
 
-`npm run db:seed:test` executes the live checks after seeding. It tests login for all four accounts; profile and membership associations; household and child isolation; parent write access; caregiver read-only access; anonymous denial; and attempts to self-grant or self-elevate a role. A successful run requires a reachable Supabase instance with all migrations applied.
+Expected behavior:
 
-Vaccination names, measurements, timeline events, appointments, and notifications are artificial examples. They are explicitly marked synthetic and are not Nigerian medical guidance or clinical recommendations.
+- Household A's owner, parent, and caregiver can read Household A records.
+- The caregiver cannot modify health records under the configured policies.
+- Household A members cannot read Household B records.
+- Anonymous users cannot read private records.
+- Authenticated users cannot grant themselves household roles; membership writes are not granted to client roles.
+
+If any check fails, do not weaken RLS. Review the migration and project configuration.
+
+## Optional local-only Dev login
+
+The **Dev login** button is only for local Supabase, requires Docker or Podman, and is unavailable for hosted projects. Since this guide uses hosted Supabase, keep `DEV_AUTH_BYPASS=false`; use a dashboard-created user instead.

@@ -1,8 +1,17 @@
 :root {
   --nimora-navy: #102B46;
   --nimora-teal: #42A995;
+  --nimora-teal-ink: #23705F;
   --nimora-ivory: #F8F7F2;
   --nimora-sage: #DCEBE4;
   --nimora-slate: #526477;
   --nimora-clay: #C77B55;
+  --nimora-clay-ink: #7A3E1C;
+  --nimora-danger: #9B2C20;
+  --nimora-danger-bg: #FBE7E4;
+  --nimora-success-ink: #1F5E4E;
+  --nimora-success-bg: #E3F1EA;
+  --nimora-warning-ink: #7A3E1C;
+  --nimora-warning-bg: #F7E9DC;
+  --nimora-neutral-bg: #EEF1EE;
 }

@@ -7,6 +7,7 @@ import { ArrowRight, LoaderCircle } from "lucide-react";
 import {
   requestPasswordReset,
   resendVerificationEmail,
+  devSignIn,
   signIn,
   signUp,
   updatePassword,
@@ -69,13 +70,15 @@ function FormField({
   );
 }
 
-export function SignInForm() {
+export function SignInForm({ devAuthEnabled = false }: { devAuthEnabled?: boolean }) {
   const [state, action, pending] = useActionState(signIn, initialState);
+  const [devState, devAction, devPending] = useActionState(devSignIn, initialState);
   const searchParams = useSearchParams();
   const next = searchParams.get("next") ?? "/dashboard";
   const verificationFailed = searchParams.get("error") === "verification";
   return (
-    <form action={action} className="space-y-5">
+    <div className="space-y-5">
+      <form action={action} className="space-y-5">
       <input type="hidden" name="next" value={next} />
       <ActionMessage state={state} />
       {verificationFailed ? <p role="alert" className="mb-5 text-sm leading-5 text-destructive">That verification link is invalid or expired. Sign in or request another email.</p> : null}
@@ -91,7 +94,26 @@ export function SignInForm() {
       <p className="text-center text-sm text-muted-foreground">
         New to NIMORA? <Link href="/signup" className="font-semibold text-primary underline-offset-4 hover:underline">Create an account</Link>
       </p>
-    </form>
+      </form>
+      {devAuthEnabled ? (
+        <div className="space-y-3 border-t border-border pt-5">
+          <ActionMessage state={devState} />
+          <form action={devAction}>
+            <input type="hidden" name="next" value={next} />
+            <button
+              className="inline-flex h-12 w-full items-center justify-center rounded-md border border-primary px-5 text-sm font-semibold text-primary transition-colors hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-60"
+              type="submit"
+              disabled={devPending}
+            >
+              {devPending ? "Signing in…" : "Dev login"}
+            </button>
+          </form>
+          <p className="text-center text-xs text-muted-foreground">
+            Local development only. Uses the configured development account.
+          </p>
+        </div>
+      ) : null}
+    </div>
   );
 }
 

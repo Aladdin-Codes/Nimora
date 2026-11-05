@@ -2,6 +2,13 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import {
+  DEV_AUTH_EMAIL,
+  ensureDevelopmentUser,
+  getDevAuthPassword,
+  isDevAuthEnabled,
+  matchesDevLogin,
+} from "@/lib/auth/dev-session";
 import { createClient } from "@/lib/supabase/server";
 
 export type AuthActionState = {
@@ -58,15 +65,61 @@ export async function signIn(
 
   if (!parsed.success) return { error: "Enter a valid email and password." };
 
+  const isDevelopmentLogin = matchesDevLogin(parsed.data.email, parsed.data.password);
+
   try {
     const supabase = await createClient();
+
+    if (isDevelopmentLogin) {
+      await ensureDevelopmentUser();
+    }
+
     const { error } = await supabase.auth.signInWithPassword(parsed.data);
     if (error) return { error: "That email and password combination was not recognized." };
   } catch {
+    if (isDevelopmentLogin) {
+      return {
+        error:
+          "Development auth is enabled, but the local Supabase setup is incomplete. Check the service-role key and dev auth settings.",
+      };
+    }
+
     return configurationError();
   }
 
   redirect(safeNextPath(parsed.data.next));
+}
+
+export async function devSignIn(
+  _state: AuthActionState,
+  formData: FormData,
+): Promise<AuthActionState> {
+  if (!isDevAuthEnabled()) {
+    return { error: "Development login is disabled." };
+  }
+
+  const next = String(formData.get("next") ?? "") || undefined;
+
+  try {
+    await ensureDevelopmentUser();
+    const supabase = await createClient();
+    const { error } = await supabase.auth.signInWithPassword({
+      email: DEV_AUTH_EMAIL,
+      password: getDevAuthPassword(),
+    });
+
+    if (error) {
+      return {
+        error: "Could not sign in with the development account. Check the local Supabase setup.",
+      };
+    }
+  } catch {
+    return {
+      error: "Development login requires local Supabase, DEV_AUTH_PASSWORD, and the server-side service-role key.",
+    };
+  }
+
+  redirect(safeNextPath(next));
 }
 
 export async function signUp(

@@ -38,9 +38,10 @@ Open [http://localhost:3000](http://localhost:3000).
 - `npm run build` - production build
 - `npm run start` - serve the production build
 - `npm run lint` - run ESLint
-- `npm run db:seed:test` - create/refresh local development test accounts and synthetic data
+- `npm run db:seed:test` - create/refresh approved development test accounts and synthetic data through Supabase Admin API
+- `npm run dev:login:print` - print hosted or local development login setup instructions
 
-See [docs/TEST_ACCOUNTS.md](./docs/TEST_ACCOUNTS.md) for local Supabase setup, seed details, and authorization checks.
+See [docs/TEST_ACCOUNTS.md](./docs/TEST_ACCOUNTS.md) for hosted Supabase setup, SQL Editor migrations and fixture scripts, seed details, and authorization checks. SQL files are in `supabase/`.
 
 ## Environment
 
